@@ -34,4 +34,34 @@ lines(1:200,(1:200)^(-alpha),col='green')
 # random walk:
 # my*=my+Emy, pi*=.....
 # (9.3) seqentually for each param
+# GEV => 3 param, while POT GPD => 2 (+n~poisson(lambda))
 
+#var of random walk for each with generator
+n=1000
+vmy<-10
+vpi<-10
+vxi<-10
+rnorMy<-rnorm(n,0,vmy)
+rnorPi<-rnorm(n,0,vpi)
+rnorXi<-rnorm(n,0,vxi)
+
+my<-rep(0,n)
+pi<-rep(0,n)
+xi<-rep(0,n)
+
+# R=f(X)/f(x) (symetric)=LGPD*poisson(lamda)/LGPD*poisson(lamda)=exp(lnGPD+lnPoi-lnGPD+lnPoi)
+#for GPD LGPD*poisson(lamda)=f(X)
+
+
+
+
+
+
+lnGPD->function(data,si,xi){
+  return(-length(data)*log(si)-(1+1/xi)*sum(log(1+xi*data/si)))
+}
+
+lnGEV->function(data,my,si,xi){
+  temp<-1+xi*(data-my)/si
+  return(-length(data)*log(si)-(1+1/xi)*sum(log(temp))-sum(temp^(-1/xi)))
+}
