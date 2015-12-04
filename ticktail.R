@@ -4,7 +4,7 @@
 n<-3650
 u<-runif(n)
 alpha<-3
-data<-matrix((1/(u))^(1/alpha),10,3650) #10 realisations (one for each day over 10 years)
+data<-matrix((1/(u))^(1/alpha),10,3650,byrow=TRUE) #10 realisations (one for each day over 10 years)
 
 plot(1:200,(1:200)^(-alpha),log='y',type='l')
 
