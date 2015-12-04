@@ -28,6 +28,8 @@ for(i in 2:n){
 }
 
 
+
+
 mcmcGDP<-function(data,start=NULL,mu=NULL,var=NULL,n=1000,lamda=NULL,gamma=NULL){
   # Fix starting values
   if(is.null(start)){
