@@ -2,14 +2,14 @@
 # Havy tail distribuiton
 ###########################
 n<-3650
-u<-runif(n)
+u<-runif(n*10)
 alpha<-3
 data<-matrix((1/(u))^(1/alpha),10,3650,byrow=TRUE) #10 realisations (one for each day over 10 years)
 
 plot(1:200,(1:200)^(-alpha),log='y',type='l')
 
 library(ACER)
-mod1<-ACER(data,k=2)
+mod1<-ACER(data,k=1)
 plot(mod1,xlim=c(0,200))
 lines(1:200,(1:200)^(-alpha),col='green')
 
