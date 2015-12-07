@@ -1,14 +1,14 @@
 # Pareto dist
 # MCMC prior xi (v=100), prior phi (v=10000) [ref onenote book page 174]
-dataVec=as.vector(t(data))
+
 ################
 # y=X-u (u>=1) #
 ################
-
+dataVec=as.vector(t(data))-1
 library(MASS)
 n<-10000
 #normMu<-rep(.Machine$double.eps*100,2)
-nromMu<-rep(1,2)
+normMu<-rep(1,2)
 coVar<-matrix(c(1,0,0,1),2,2)
 #normMu<-c(-0.014,0.437)
 #coVar<-matrix(c(1.032e-6,-3.552e-6,-3.552e-6,1.01e-4),2)
@@ -37,11 +37,16 @@ X<-list(data=dataVec, estimators=theta, var=coVar, mu=normMu, burnin=NA, aRate=N
 class(X)<-'MCMC'
 plot(density(X$estimators[1,1000:n]))
 
-X$estimators[,1154]
+prob<-lnGDP(dataVec,theta)
+which(prob==max(prob))
+X$estimators[,7060]
 
 
-
-mcmcGDP<-function(data,start=NULL,mu=NULL,var=NULL,n=1000,lamda=NULL,gamma=NULL){
+# data is matrix/vector of data (X), u is treshold, start is starting values, mu and var is mean and
+# variance for the random walk starting distribution (g(x*|x)), gamma is the adaptive paramter (exp(-x/t)), 
+# a is the optimal accaptance rate.
+mcmcGDP<-function(data,u,start=NULL,mu=NULL,var=NULL,n=1000,gamma=NULL,a=NULL){
+  if(is.matrix(data)){data=as.vector(t(data))}
   # Fix starting values
   if(is.null(start)){
     start<-matrix(rep(NA,10),2)
@@ -65,7 +70,7 @@ mcmcGDP<-function(data,start=NULL,mu=NULL,var=NULL,n=1000,lamda=NULL,gamma=NULL)
     lnBest<-lnGDP(data,startBest)
     temp<-NA
     for(i in 1:length(start[1,])){
-      temp<-mcmcGDP(data,start[,i],mu=mu,var=var,n=200,gamma=0.5)
+      temp<-mcmcGDP(data,u,start[,i],mu=mu,var=var,n=200,gamma=0.5,a=a)
       if(temp$lnMax>lnBest){
         lnBest<-temp$lnMax
         startBest<-temp$mle
@@ -73,6 +78,9 @@ mcmcGDP<-function(data,start=NULL,mu=NULL,var=NULL,n=1000,lamda=NULL,gamma=NULL)
     }
     start<-startBest
   }
+  if(is.null(a)){
+    lamda<-2.38^2/2
+  }else{lamda<-0}
   
   #MCMC code
   #
@@ -111,8 +119,9 @@ lnGDP<-function(data,X){
     return( -(-length(data)*X[2]-(1+1/X[1])*sum(log(1+X[1]*data/exp(X[2]))))) #minus since optim finds minimum
   }
 }
-theta<-optim(c(1,1), lnGDP,data=(data-1))$par
-lines(test,(1+theta[1]*(test-1)/exp(theta[2]))^(-1/theta[1]),col=2)
+thetaOpt<-optim(c(1,1), lnGDP,data=dataVec)$par
+lines(1:200,(1+thetaOpt[1]*(1:200-1)/exp(thetaOpt[2]))^(-1/thetaOpt[1]),col=2)
+lines(1:200,(1+theta[1,200]*(1:200-1)/exp(theta[2,200]))^(-1/theta[1,200]),col=3)
 
 
 lines.mcmc<-function(data,X,xlim){
