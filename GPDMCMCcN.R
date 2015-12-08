@@ -1,3 +1,11 @@
+library(Rcpp)
+sourceCpp("Cpp/MCMC_GPD_CPP.cpp")
+
+
+
+
+
+
 test<-function(data){
   dataVec=as.vector(t(data))-1
   library(MASS)
