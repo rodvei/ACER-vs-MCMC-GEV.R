@@ -6,7 +6,7 @@
 # mu and var is mean and variance for the random walk starting distribution (g(x*|x)), 
 # gamma is the adaptive paramter (exp(-x/t)), 
 # a is the optimal accaptance rate.
-MCMCGPD<-function(data,u,start=NULL,mu=NULL,var=NULL,n=1000,gamma=NULL,a=NULL){
+MCMCGPD<-function(data,u,start=NULL,mu=NULL,var=NULL,n=1000,a=NULL,gamma=NULL){
   require(MASS)
   
   if(is.matrix(data)){data=as.vector(t(data))}
@@ -14,29 +14,24 @@ MCMCGPD<-function(data,u,start=NULL,mu=NULL,var=NULL,n=1000,gamma=NULL,a=NULL){
   ny<-length(y)
   k<-sum(y>0)
   y=y[y>0]
-  dataLength<-length(data)
   
   
   # Fix starting values
   if(is.null(start)){
-    start<-matrix(rep(NA,15),3)
-    start[,1]<-c(rep(.Machine$double.eps*100,2),k/ny)
-    start[,2]<-c(1.5,0.3,k/ny)
-    start[,3]<-c(0.5,3,k/ny)
-    start[,4]<-c(-0.1,0.3,k/ny)
-    start[,5]<-c(-0.5,3,k/ny)
+    start<-matrix(rep(NA,10),2)
+    start[,1]<-rep(.Machine$double.eps*100,2)
+    start[,2]<-c(1.5,0.3)
+    start[,3]<-c(0.5,3)
+    start[,4]<-c(-0.1,0.3)
+    start[,5]<-c(-0.5,3)
   }else if(all(start==0)){
-    start<-c(rep(.Machine$double.eps*100,2),k/ny)
+    start<-c(.Machine$double.eps*100,log(.Machine$double.eps*100))
   }else{
     if(length(start)==2){
-      start<-c(start[1],log(start[2]),k/ny)
-      if(start[2]<0){stop('sigma must be > 0')}
-    }else if(length(start)==3){
-      start<-c(start[1],log(start[2]),start[3])
-      if(start[2]<0){stop('sigma must be > 0')}
+      if(start[2]<=0){stop('sigma must be > 0')}
+      start<-c(start[1],log(start[2]))
     }else if(is.matrix(start)){
       if(any(start[2,])<0){stop('sigma must be > 0')}
-      if(dim(start)[1]==2){start<-rbind(start[1,],start[2,],k/ny)}
     }else{
       stop('start must be vector or matrix')
     }
@@ -48,67 +43,56 @@ MCMCGPD<-function(data,u,start=NULL,mu=NULL,var=NULL,n=1000,gamma=NULL,a=NULL){
   if(is.null(var)){var<-matrix(c(1,0,0,1),2,2)}
   
   # Choose starting value
-  if(length(start)>3){
-    startBest<-c(0,0,0)
+  if(length(start)>2){
+    startBest<-c(0,0)
     lnBest<--Inf
     temp<-NA
     for(i in 1:length(start[1,])){
       if(start[1,i]< (-start[2,i]/max(data))){
         start[1,i]<- 0.9*(-start[2,i]/max(data))
       }
-      temp<-MCMCGPD(data,u,start[,i],mu=mu,var=var,n=500,gamma=0.1,a=a)
-      lnTemp<-lnGPD(y,c(temp$theta[1,500],temp$theta[2,500]))
+      temp<-MCMCGPD(data=data,u=u,start=start[,i],mu=mu,var=var,n=500,gamma=0.1)
+      lnTemp<-lnGPD(y,temp$theta[c(1:2),500]) #better to test for R?
       if(lnTemp>lnBest){
         lnBest<-lnTemp
-        startBest<-c(temp$theta[1,500],log(temp$theta[2,500]),temp$theta[3,500])
+        startBest<-c(temp$theta[1,500],log(temp$theta[2,500]))
       }
     }
     start<-startBest
   }
   
   ##############################MCMC###################################
-  lamdaAlp<-2.38^2
   lamda<-2.38^2/2
-  theta<-matrix(rep(NA,3*n),3)
+  theta<-matrix(rep(NA,2*n),2)
   theta[,1]<-start
-  uni<-NA
+  uni<-log(runif(n-1))
   R<-NA
-  RAlp<-NA
   Xtemp<-NA
-  Alptemp<-NA
   if(is.null(gamma)){
-    gamma<-0.5*exp(-(1:n)*log(10)/(0.1*n))
+    gamma<-0.5*exp(-(1:n)*log(10)/(0.1*n)) # T=0.1*n/log(10) such that gamma=1/20 at 0.1*n
   }else{
     gamma<-rep(gamma,n)
   }
   for(i in 2:n){
-    Xtemp<-mvrnorm(n=1,theta[c(1,2),(i-1)],lamda*var)
-    uni<-log(runif(1))
-    R=lnRGPD(y,Xtemp,theta[c(1,2),(i-1)])
+    Xtemp<-mvrnorm(n=1,theta[,(i-1)],lamda*var)
+    R=lnRGPD(y,Xtemp,theta[,(i-1)])
     if(uni[i-1]<R){
-      theta[c(1,2),i]<-Xtemp
+      theta[,i]<-Xtemp
     }else{
-      theta[c(1,2),i]<-theta[c(1,2),(i-1)]
+      theta[,i]<-theta[,(i-1)]
     }
-    
-    Alptemp<-rnorm(n=1,theta[3,(i-1)],lamdaAlp*varAlp)
-    uni<-log(runif(1))
-    RAlp<- 
-      ###############
-      ####HERE!!!####
-      ###############
     
     if(!is.null(a)){
       if(R>=0){R=1
       }else{R=exp(R)}
-      lamda<-lamda*exp(gamma[i]*(R-a)) #better way? 2 difference for?
+      lamda<-lamda*exp(gamma[i]*(R-a))
     }
     var<-var+gamma[i]*((theta[,i]-mu)%*%t(theta[,i]-mu)-var)
     mu<-mu+gamma[i]*(theta[,i]-mu)
   }
   #####################################################################
-  theta
-  MCMC<-list(theta=rbind(theta[1,],exp(theta[2,])), u=u, var=var, mu=mu, burnin=NA, aRate=NA, MLE=NA, MLEest=NA)
+  theta<-rbind(theta[1,],exp(theta[2,]),rbeta(n,k+1,ny-k+1))
+  MCMC<-list(theta=theta, u=u, var=var, mu=mu, burnin=NA, aRate=NA, MLE=NA, MLEest=NA)
   class(MCMC)<-'MCMC'
   return(MCMC)
 }
@@ -140,3 +124,14 @@ lnGPD<-function(data,X){
   }
 }
 
+# Effective sample size
+# class(X)= sim of xi, sigma or alpha after burnin
+effsampsize<-function(X){
+  p<-acf(X,plot=FALSE)[[1]]
+  pleng<-which(p<0.1)[1]
+  if(pleng==2){
+    return(length(X))
+  }else{
+    return(length(X)/(sum(p[2:pleng])*2+1))
+  }
+}
