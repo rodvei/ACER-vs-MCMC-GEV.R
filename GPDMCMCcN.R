@@ -11,35 +11,45 @@ MCMCGPD<-function(data,u,start=NULL,mu=NULL,var=NULL,n=1000,gamma=NULL,a=NULL){
   
   if(is.matrix(data)){data=as.vector(t(data))}
   y<-data-u
+  ny<-length(y)
+  k<-sum(y>0)
   y=y[y>0]
   dataLength<-length(data)
   
+  
   # Fix starting values
   if(is.null(start)){
-    start<-matrix(rep(NA,10),2)
-    start[,1]<-rep(.Machine$double.eps*100,2)
-    start[,2]<-c(1.5,0.3)
-    start[,3]<-c(0.5,3)
-    start[,4]<-c(-0.1,0.3)
-    start[,5]<-c(-0.5,3)
+    start<-matrix(rep(NA,15),3)
+    start[,1]<-c(rep(.Machine$double.eps*100,2),k/ny)
+    start[,2]<-c(1.5,0.3,k/ny)
+    start[,3]<-c(0.5,3,k/ny)
+    start[,4]<-c(-0.1,0.3,k/ny)
+    start[,5]<-c(-0.5,3,k/ny)
   }else if(all(start==0)){
-    start<-rep(.Machine$double.eps*100,2)
+    start<-c(rep(.Machine$double.eps*100,2),k/ny)
   }else{
     if(length(start)==2){
-      start<-c(start[1],log(start[2]))
+      start<-c(start[1],log(start[2]),k/ny)
+      if(start[2]<0){stop('sigma must be > 0')}
+    }else if(length(start)==3){
+      start<-c(start[1],log(start[2]),start[3])
+      if(start[2]<0){stop('sigma must be > 0')}
+    }else if(is.matrix(start)){
+      if(any(start[2,])<0){stop('sigma must be > 0')}
+      if(dim(start)[1]==2){start<-rbind(start[1,],start[2,],k/ny)}
     }else{
-      start<-rbind(start[1,],log(start[2,]))
+      stop('start must be vector or matrix')
     }
   }
   
   
-  # Fix mu and var for MCMC
+  # Starting mu and var for MCMC
   if(is.null(mu)){mu=c(0,0)}
   if(is.null(var)){var<-matrix(c(1,0,0,1),2,2)}
   
   # Choose starting value
-  if(length(start)>2){
-    startBest<-c(0,0)
+  if(length(start)>3){
+    startBest<-c(0,0,0)
     lnBest<--Inf
     temp<-NA
     for(i in 1:length(start[1,])){
@@ -50,30 +60,44 @@ MCMCGPD<-function(data,u,start=NULL,mu=NULL,var=NULL,n=1000,gamma=NULL,a=NULL){
       lnTemp<-lnGPD(y,c(temp$theta[1,500],temp$theta[2,500]))
       if(lnTemp>lnBest){
         lnBest<-lnTemp
-        startBest<-c(temp$theta[1,500],log(temp$theta[2,500]))
+        startBest<-c(temp$theta[1,500],log(temp$theta[2,500]),temp$theta[3,500])
       }
     }
     start<-startBest
   }
   
   ##############################MCMC###################################
+  lamdaAlp<-2.38^2
   lamda<-2.38^2/2
-  theta<-matrix(rep(NA,2*n),2)
+  theta<-matrix(rep(NA,3*n),3)
   theta[,1]<-start
-  uni=log(runif(n-1))
+  uni<-NA
+  R<-NA
+  RAlp<-NA
+  Xtemp<-NA
+  Alptemp<-NA
   if(is.null(gamma)){
     gamma<-0.5*exp(-(1:n)*log(10)/(0.1*n))
   }else{
     gamma<-rep(gamma,n)
   }
   for(i in 2:n){
-    Xtemp<-mvrnorm(n=1,theta[,(i-1)],lamda*var)
-    R=lnRGPD(y,Xtemp,theta[,(i-1)])
+    Xtemp<-mvrnorm(n=1,theta[c(1,2),(i-1)],lamda*var)
+    uni<-log(runif(1))
+    R=lnRGPD(y,Xtemp,theta[c(1,2),(i-1)])
     if(uni[i-1]<R){
-      theta[,i]<-Xtemp
+      theta[c(1,2),i]<-Xtemp
     }else{
-      theta[,i]<-theta[,(i-1)]
+      theta[c(1,2),i]<-theta[c(1,2),(i-1)]
     }
+    
+    Alptemp<-rnorm(n=1,theta[3,(i-1)],lamdaAlp*varAlp)
+    uni<-log(runif(1))
+    RAlp<- 
+      ###############
+      ####HERE!!!####
+      ###############
+    
     if(!is.null(a)){
       if(R>=0){R=1
       }else{R=exp(R)}
