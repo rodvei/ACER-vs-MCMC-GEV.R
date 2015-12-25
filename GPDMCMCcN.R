@@ -67,43 +67,21 @@ mcmc.gpd.numeric<-function(X,u,n=1000,start=NULL,mu=NULL,var=NULL,a=NULL,gamma=N
   
   ##############################MCMC###################################
   lamda<-2.38^2/2
-  theta<-matrix(rep(NA,2*n),2)
-  theta[,1]<-start
-  uni<-log(runif(n-1))
-  R<-NA
-  Xtemp<-NA
-  tau<-NA
   gammaInd<-gamma
   if(is.null(gamma)){
-    tau<-0.1*n/log(10)
-    gamma<-0.5*exp(-(1:n)/tau) # T=0.1*n/log(10) such that gamma=1/20 at 0.1*n
+    tau<-0.1*n/log(10) # T=0.1*n/log(10) such that gamma=1/20 at 0.1*n
+    gamma=0
   }else{
-    tau<-NULL
-    gamma<-rep(gamma,n)
+    tau<-0
   }
-  for(i in 2:n){
-    Xtemp<-mvrnorm(n=1,theta[,(i-1)],lamda*var)
-    R=lnRGdp(y,Xtemp,theta[,(i-1)])
-    if(uni[i-1]<R){
-      theta[,i]<-Xtemp
-    }else{
-      theta[,i]<-theta[,(i-1)]
-    }
-    
-    if(gamma[i]>.Machine$double.eps){
-      if(!is.null(a)){
-        if(R>=0){R=1
-        }else{R=exp(R)}
-        lamda<-lamda*exp(gamma[i]*(R-a))
-      }
-      var<-var+gamma[i]*((theta[,i]-mu)%*%t(theta[,i]-mu)-var)
-      mu<-mu+gamma[i]*(theta[,i]-mu)
-    }
-  }
+  if(is.null(a)){a=0}
+  if(is.null(gamma)){gamma=0}
+  MCMC<-mcmcGpd.internal(y=y,nstart=1,n=n,start=start,mu=mu,var=var,tau=tau,a=a,gamma=gamma,lamda=lamda)
+  
   #####################################################################
-  theta<-rbind(theta[1,],exp(theta[2,]),rbeta(n,k+1,ny-k+1))
-  MCMC<-list(data=X, u=u, theta=theta, var=var, mu=mu, burnin=NA, n=n, aRate=NA, MLE=NA, MLEest=NA, 
-             tau=tau, a=a, gamma=gammaInd,lamda=lamda)
+  MCMC$theta<-rbind(MCMC$theta,rbeta(n,k+1,ny-k+1))
+  MCMC$data<-X
+  MCMC$u<-u
   class(MCMC)<-'mcmc'
   return(MCMC)
 }
@@ -121,18 +99,34 @@ mcmc.gpd.mcmc<-function(X,n=1000,a=NULL,gamma=NULL,...){
   mu<-X$mu
   lamda<-X$lamda
   a<-X$a
-  theta<-matrix(rep(NA,2*(n+1)),2)
-  theta[,1]<-c(X$theta[1,X$n],log(X$theta[2,X$n]))
-  uni<-log(runif(n))
+  tau<-X$tau
+  start<-c(X$theta[1,X$n],log(X$theta[2,X$n]))
+  
+  MCMC<-mcmcGpd.internal(y=y,nstart=X$n,n=(n+1),start=start,mu=mu,var=var,tau=tau,a=a,gamma=gamma,lamda=lamda)
+  #####################################################################
+  X$theta<-cbind(X$theta,rbind(MCMC$theta[c(1,2),2:MCMC$n],rbeta(MCMC$n-1,k+1,(ny-k+1))))
+  X$var<-MCMC$var
+  X$mu<-MCMC$mu
+  X$n<-X$n+n
+  X$lamda<-MCMC$lamda
+  return(X)
+}
+
+# gamma>0 if tau==0
+mcmcGpd.internal<-function(y,nstart,n,start,mu,var,tau,a,gamma,lamda){
+  if(lamda==0){lamda<-2.38^2/2}
+  theta<-matrix(rep(NA,2*n),2)
+  theta[,1]<-start
+  uni<-log(runif(n-1))
   R<-NA
   Xtemp<-NA
-  if(is.null(X$gamma)){
-    gamma<-0.5*exp(-(X$n:(n+X$n))/X$tau) # T=0.1*n/log(10) such that gamma=1/20 at 0.1*n
+  gammaInd<-gamma
+  if(tau!=0){
+    gamma<-0.5*exp(-(nstart:(nstart+n-1))/tau) # T=0.1*n/log(10) such that gamma=1/20 at 0.1*n
   }else{
-      gamma<-rep(X$gamma,n)
+    gamma<-rep(gamma,n)
   }
-  
-  for(i in 2:(n+1)){
+  for(i in 2:n){
     Xtemp<-mvrnorm(n=1,theta[,(i-1)],lamda*var)
     R=lnRGdp(y,Xtemp,theta[,(i-1)])
     if(uni[i-1]<R){
@@ -140,8 +134,9 @@ mcmc.gpd.mcmc<-function(X,n=1000,a=NULL,gamma=NULL,...){
     }else{
       theta[,i]<-theta[,(i-1)]
     }
+    
     if(gamma[i]>.Machine$double.eps){
-      if(!is.null(a)){
+      if(a!=0){
         if(R>=0){R=1
         }else{R=exp(R)}
         lamda<-lamda*exp(gamma[i]*(R-a))
@@ -150,15 +145,12 @@ mcmc.gpd.mcmc<-function(X,n=1000,a=NULL,gamma=NULL,...){
       mu<-mu+gamma[i]*(theta[,i]-mu)
     }
   }
-  #####################################################################
-  X$theta<-cbind(X$theta,rbind(theta[1,2:(n+1)],exp(theta[2,2:(n+1)]),rbeta(n,k+1,ny-k+1)))
-  X$var<-var
-  X$mu<-mu
-  X$n<-X$n+n
-  X$lamda<-lamda
-  return(X)
-}
+  theta<-rbind(theta[1,],exp(theta[2,]))
+  MCMC<-list(data=NA,u=NA,theta=theta, mu=mu, var=var, n=n, burnin=NA,aRate=NA, MLE=NA, 
+             MLEest=NA,tau=tau, a=a, gamma=gammaInd,lamda=lamda)
 
+  return(MCMC)
+}
 
 # l(xi,si)=n*phi-(1+1/xi)*sum(log(1+xi*y/exp(phi)))) # phi=log(si)
 lnRGdp<-function(data,Xtemp,X){
@@ -189,7 +181,7 @@ lnGpd<-function(data,X){
 
 # Effective sample size
 # class(X)= sim of xi, sigma or alpha after burnin
-effsampsize<-function(X){
+effsampSize<-function(X){
   p<-acf(X,plot=FALSE)[[1]]
   pleng<-which(p<0.1)[1]
   if(pleng==2){
@@ -197,4 +189,10 @@ effsampsize<-function(X){
   }else{
     return(length(X)/(sum(p[2:pleng])*2+1))
   }
+}
+
+#acceptance (a) rate
+aRate<-function(X){
+  a<-sum(diff(X)!=0)
+  return(a/length(X))
 }
