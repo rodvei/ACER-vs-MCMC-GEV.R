@@ -1,9 +1,13 @@
 #include <iostream>
 #include <ctime>
+#include <math.h>
+#include <float.h>
+#include <vector>
 using namespace std;
 
 const double epsilon = numeric_limits<double>::min();
 const double two_pi = 2.0*3.14159265358979323846;
+const double expC = 2.71828182845904523536;
 
 double * mvrnormC(double mu[2], double sigma[4]) {
 static double mrn[2];
@@ -35,7 +39,30 @@ return(mrn);
 
 int main()
 {
+	cout << -DBL_MAX;;
+
+
+	/*
 	srand((unsigned)time(NULL));
+	int start = clock();
+	for (int i = 1; i < 1000000; i++) {
+		pow(expC, rand()*(1.0 / RAND_MAX));
+	}
+	int end = clock();
+	std::cout << "it took " << end - start << "ticks, or " << ((float)end - start) / CLOCKS_PER_SEC << "seconds." << std::endl;
+
+	int start2 = clock();
+	for (int j = 1; j < 1000000; j++) {
+		exp(rand()*(1.0 / RAND_MAX));
+	}
+	int end2 = clock();
+	std::cout << "it took " << end2 - start2 << "ticks, or " << ((float)end2 - start2) / CLOCKS_PER_SEC << "seconds." << std::endl;
+
+	bool test;
+	test = ((1.0 + DBL_EPSILON/2) == 1.0);//*pow(10.0,10))!= 1);
+	std::cout << test << std::endl;
+	std::cout << DBL_EPSILON << std::endl;
+	
 	double mu[2] = {1,2};
 	double sigma[4] = { 1,2,2,5 };
 	double *mrn;
@@ -47,8 +74,11 @@ int main()
 	mrn = mvrnormC(mu, sigma);
 	cout << *(mrn) << endl;
 	cout << *(mrn + 1) << endl;
+	*/
 	cin.get();
-	return 0;
+	return 0; 
+
+
 }
 
 
