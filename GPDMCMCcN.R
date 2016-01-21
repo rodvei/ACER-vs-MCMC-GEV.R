@@ -4,12 +4,12 @@
 # data is matrix/vector of data (X), u aka thershold, start is starting values ([type,number])
 # type is xi and sigma (=exp(phi)), 
 # mu and var is mean and variance for the random walk starting distribution (g(x*|x)), 
-# gamma is the adaptive paramter (exp(-x/t)), 
+# gam (gamma) is the adaptive paramter (exp(-x/t)), 
 # a is the optimal accaptance rate.
-# tau=c(gamma size, at what n) default tau=c(1/20,0.1*n)
+# tau=c(gam size, at what n) default tau=c(1/20,0.1*n)
 
 mcmc.gpd<- function(X, ...) UseMethod("mcmc.gpd",X)
-mcmc.gpd.numeric<-function(X,u,n=1000,start=NULL,mu=NULL,var=NULL,a=NULL,gamma=NULL,cpp=TRUE,...){
+mcmc.gpd.numeric<-function(X,u,n=1000,start=NULL,mu=NULL,var=NULL,a=NULL,gam=NULL,cpp=TRUE,...){
   require(MASS)
   
   if(is.matrix(X)){X=as.vector(t(X))}
@@ -53,7 +53,7 @@ mcmc.gpd.numeric<-function(X,u,n=1000,start=NULL,mu=NULL,var=NULL,a=NULL,gamma=N
       if(start[1,i]< (-start[2,i]/max(y))){
         start[1,i]<- 0.9*(-start[2,i]/max(y))
       }
-      temp<-mcmc.gpd(X=X,u=u,start=start[,i],mu=mu,var=var,n=500,gamma=0.1,cpp=cpp)
+      temp<-mcmc.gpd(X=X,u=u,start=start[,i],mu=mu,var=var,n=500,gam=0.1,cpp=cpp)
       lnTemp<-lnGpd(y,temp$theta[c(1:2),500]) #better to test for R?
       if(lnTemp>lnBest){
         lnBest<-lnTemp
@@ -67,24 +67,24 @@ mcmc.gpd.numeric<-function(X,u,n=1000,start=NULL,mu=NULL,var=NULL,a=NULL,gamma=N
   
   ##############################MCMC###################################
   lamda<-2.38^2/2
-  gammaInd<-gamma
-  if(is.null(gamma)){
-    tau<-0.1*n/log(10) # T=0.1*n/log(10) such that gamma=1/20 at 0.1*n
-    gamma=0
+  gamInd<-gam
+  if(is.null(gam)){
+    tau<-0.1*n/log(10) # T=0.1*n/log(10) such that gam=1/20 at 0.1*n
+    gam=0
   }else{
     tau<-0
   }
   if(is.null(a)){a=0}
-  if(is.null(gamma)){gamma=0}
+  if(is.null(gam)){gam=0}
   
   if(cpp==TRUE){
-    MCMC<-mcmcGpdC(y=y,nstart=1,n=n,start=start,muR=mu,varR=var, tau=tau,a=a, gamma=gamma,lamda=lamda)
+    MCMC<-mcmcGpdC(y=y,nstart=1,n=n,start=start,muR=mu,varR=var, tau=tau,a=a, gam=gam,lamda=lamda)
     MCMC$theta<-rbind(MCMC$thetaXi,exp(MCMC$thetaPhi))
     MCMC$thetaXi<-NULL
     MCMC$thetaPhi<-NULL
     MCMC$var<-matrix(MCMC$var,2,2)
   }else{
-    MCMC<-mcmcGpd.internal(y=y,nstart=1,n=n,start=start,mu=mu,var=var,tau=tau,a=a,gamma=gamma,lamda=lamda)
+    MCMC<-mcmcGpd.internal(y=y,nstart=1,n=n,start=start,mu=mu,var=var,tau=tau,a=a,gam=gam,lamda=lamda)
   }
   
   #####################################################################
@@ -97,9 +97,9 @@ mcmc.gpd.numeric<-function(X,u,n=1000,start=NULL,mu=NULL,var=NULL,a=NULL,gamma=N
   return(MCMC)
 }
 
-mcmc.gpd.mcmc<-function(X,n=1000,a=NULL,gamma=NULL,cpp=TRUE,...){
+mcmc.gpd.mcmc<-function(X,n=1000,a=NULL,gam=NULL,cpp=TRUE,...){
   require(MASS)
-  if(!is.null(gamma)){X$gamma<-gamma}
+  if(!is.null(gam)){X$gam<-gam}
   if(!is.null(a)){X$a<-a}
   y<-X$data-X$u
   ny<-length(y)
@@ -111,19 +111,20 @@ mcmc.gpd.mcmc<-function(X,n=1000,a=NULL,gamma=NULL,cpp=TRUE,...){
   mu<-X$mu
   lamda<-X$lamda
   a<-X$a
+  gam<-X$gam
   tau<-X$tau
   start<-c(X$theta[1,X$n],log(X$theta[2,X$n]))
   if(cpp==TRUE){
-    MCMC<-mcmcGpdC(y=y,nstart=X$n,n=(n+1),start=start,muR=mu,varR=var, tau=tau,a=a, gamma=gamma,lamda=lamda)
+    MCMC<-mcmcGpdC(y=y,nstart=X$n,n=(n+1),start=start,muR=mu,varR=var, tau=tau,a=a, gam=gam,lamda=lamda)
     MCMC$theta<-rbind(MCMC$thetaXi,exp(MCMC$thetaPhi))
     MCMC$thetaXi<-NULL
     MCMC$thetaPhi<-NULL
     MCMC$var<-matrix(MCMC$var,2,2)
   }else{
-    MCMC<-mcmcGpd.internal(y=y,nstart=X$n,n=(n+1),start=start,mu=mu,var=var,tau=tau,a=a,gamma=gamma,lamda=lamda)
+    MCMC<-mcmcGpd.internal(y=y,nstart=X$n,n=(n+1),start=start,mu=mu,var=var,tau=tau,a=a,gam=gam,lamda=lamda)
   }
   #####################################################################
-  X$theta<-rbind(X$theta,rbind(MCMC$theta[c(1,2),2:MCMC$n],rbeta(MCMC$n-1,k+1,(ny-k+1))))
+  X$theta<-cbind(X$theta,rbind(MCMC$theta[c(1,2),2:MCMC$n],rbeta(MCMC$n-1,k+1,(ny-k+1))))
   X$var<-MCMC$var
   X$mu<-MCMC$mu
   X$n<-X$n+n
@@ -131,19 +132,19 @@ mcmc.gpd.mcmc<-function(X,n=1000,a=NULL,gamma=NULL,cpp=TRUE,...){
   return(X)
 }
 
-# gamma>0 if tau==0
-mcmcGpd.internal<-function(y,nstart,n,start,mu,var,tau,a,gamma,lamda){
+# gam>0 if tau==0
+mcmcGpd.internal<-function(y,nstart,n,start,mu,var,tau,a,gam,lamda){
   if(lamda==0){lamda<-2.38^2/2}
   theta<-matrix(rep(NA,2*n),2)
   theta[,1]<-start
   uni<-log(runif(n-1))
   R<-NA
   Xtemp<-NA
-  gammaInd<-gamma
+  gamInd<-gam
   if(tau!=0){
-    gamma<-0.5*exp(-(nstart:(nstart+n-1))/tau) # T=0.1*n/log(10) such that gamma=1/20 at 0.1*n
+    gam<-0.5*exp(-(nstart:(nstart+n-1))/tau) # T=0.1*n/log(10) such that gam=1/20 at 0.1*n
   }else{
-    gamma<-rep(gamma,n)
+    gam<-rep(gam,n)
   }
   for(i in 2:n){
     Xtemp<-mvrnorm(n=1,theta[,(i-1)],lamda*var)
@@ -154,19 +155,19 @@ mcmcGpd.internal<-function(y,nstart,n,start,mu,var,tau,a,gamma,lamda){
       theta[,i]<-theta[,(i-1)]
     }
     
-    if(gamma[i]>.Machine$double.eps){
+    if(gam[i]>.Machine$double.eps){
       if(a!=0){
         if(R>=0){R=1
         }else{R=exp(R)}
-        lamda<-lamda*exp(gamma[i]*(R-a))
+        lamda<-lamda*exp(gam[i]*(R-a))
       }
-      var<-var+gamma[i]*((theta[,i]-mu)%*%t(theta[,i]-mu)-var)
-      mu<-mu+gamma[i]*(theta[,i]-mu)
+      var<-var+gam[i]*((theta[,i]-mu)%*%t(theta[,i]-mu)-var)
+      mu<-mu+gam[i]*(theta[,i]-mu)
     }
   }
   theta<-rbind(theta[1,],exp(theta[2,]))
   MCMC<-list(data=NA,u=NA,theta=theta, mu=mu, var=var, n=n, burnin=NA,aRate=NA, MLE=NA, 
-             MLEest=NA,tau=tau, a=a, gamma=gammaInd,lamda=lamda)
+             MLEest=NA,tau=tau, a=a, gam=gamInd,lamda=lamda)
 
   return(MCMC)
 }

@@ -89,14 +89,14 @@ double lnRGdp(double *y, int yn,double ymax, double Xtemp1, double Xtemp2, doubl
 
 
 // [[Rcpp::export]]
-Rcpp::List mcmcGpdC(NumericVector y, int nstart, int n, NumericVector start, NumericVector muR, NumericMatrix varR, double tau, double a, double gamma, double lamda) //,NumericVector y, NumericVector start, double tau, double a, double gamma, double lamda)
+Rcpp::List mcmcGpdC(NumericVector y, int nstart, int n, NumericVector start, NumericVector muR, NumericMatrix varR, double tau, double a, double gam, double lamda)
 {
 	srand((unsigned)time(NULL));
 	//double total1, total2;
 	double mu[2], var[4];
 	double lamdaxVar[4];
 	double R;
-	double gammaC = gamma;
+	double gamC = gam;
 	double uni;
 	double *Xtemp;
 	double ymax= -DBL_MAX;
@@ -124,7 +124,7 @@ Rcpp::List mcmcGpdC(NumericVector y, int nstart, int n, NumericVector start, Num
 
 	for (int i = 1; i <n; i++) {
 		if (tau != 0) {
-			gammaC = 0.5*exp(-(i + nstart) / tau);// improve 1/sqrt(i)??
+			gamC = 0.5*exp(-(i + nstart) / tau);// improve 1/sqrt(i)??
 		}
 
 		for (int k = 0; k < 4; k++) lamdaxVar[k] = var[k] * lamda;
@@ -141,7 +141,7 @@ Rcpp::List mcmcGpdC(NumericVector y, int nstart, int n, NumericVector start, Num
 			thetaXi[i] = thetaXi[i-1];
 			thetaPhi[i] = thetaPhi[i-1];
 		}
-		if (gammaC > DBL_EPSILON) {
+		if (gamC > DBL_EPSILON) {
 			if (a != 0) {
 				if (R >= 0) {
 					R = 1;
@@ -149,16 +149,16 @@ Rcpp::List mcmcGpdC(NumericVector y, int nstart, int n, NumericVector start, Num
 				else {
 					R = exp(R);
 				}
-				lamda = lamda*exp(gammaC*(R - a));
+				lamda = lamda*exp(gamC*(R - a));
 			}
-			// Matrix calculation: var=var+gamma*((theta[,i]-mu)%*%t(theta[,i]-mu)-var)
-			var[0] = var[0] + gammaC*((thetaXi[i] - mu[0])*(thetaXi[i] - mu[0]) -var[0]);
-			var[1] = var[1] + gammaC*((thetaXi[i] - mu[0])*(thetaPhi[i] - mu[1]) - var[1]);
-			var[3] = var[3] + gammaC*((thetaPhi[i] - mu[1])*(thetaPhi[i] - mu[1]) - var[3]);
+			// Matrix calculation: var=var+gam*((theta[,i]-mu)%*%t(theta[,i]-mu)-var)
+			var[0] = var[0] + gamC*((thetaXi[i] - mu[0])*(thetaXi[i] - mu[0]) -var[0]);
+			var[1] = var[1] + gamC*((thetaXi[i] - mu[0])*(thetaPhi[i] - mu[1]) - var[1]);
+			var[3] = var[3] + gamC*((thetaPhi[i] - mu[1])*(thetaPhi[i] - mu[1]) - var[3]);
 			var[2] = var[1];
-			// Matrix calculation: mu<-mu+gamma*(theta[,i]-mu)
-			mu[0] = mu[0] + gammaC*(thetaXi[i] - mu[0]);
-			mu[1] = mu[1] + gammaC*(thetaPhi[i] - mu[1]);
+			// Matrix calculation: mu<-mu+gam*(theta[,i]-mu)
+			mu[0] = mu[0] + gamC*(thetaXi[i] - mu[0]);
+			mu[1] = mu[1] + gamC*(thetaPhi[i] - mu[1]);
 		}
 	}
 
@@ -169,7 +169,7 @@ Rcpp::List mcmcGpdC(NumericVector y, int nstart, int n, NumericVector start, Num
 		Rcpp::Named("thetaXi") = thetaXi, Rcpp::Named("thetaPhi") = thetaPhi, Rcpp::Named("mu") = muC, 
 		Rcpp::Named("var") = varC, Rcpp::Named("n") = n, Rcpp::Named("burnin") = NAN, Rcpp::Named("aRate") = NAN, 
 		Rcpp::Named("MLE") = NAN, Rcpp::Named("MLEest") = NAN, Rcpp::Named("tau") = tau, Rcpp::Named("a") = a, 
-		Rcpp::Named("gamma") = gamma, Rcpp::Named("lamda") = lamda);
+		Rcpp::Named("gam") = gam, Rcpp::Named("lamda") = lamda);
 }
 
 /*

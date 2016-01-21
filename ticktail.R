@@ -10,20 +10,22 @@ plot(1:200,(1:200)^(-alpha),log='y',type='l')
 
 
 # Speed Test
-test<-mcmc.gpd(X=data,u=1,mu=mu,var=var,n=1000,gamma=0.1,cpp=FALSE)
+test<-mcmc.gpd(X=data,u=1,n=1000,cpp=FALSE)
+test<-mcmc.gpd(X=test,n=1000,cpp=FALSE)
 plot(test$theta[1,],type='l')
-testC<-mcmc.gpd(X=data,u=1,mu=mu,var=var,n=1000,gamma=0.1,cpp=TRUE)
+testC<-mcmc.gpd(X=data,u=1,n=1000,cpp=TRUE)
+testC<-mcmc.gpd(X=testC,n=1000,cpp=TRUE)
 lines(testC$theta[1,],col=2)
 effsampSize(test$theta[1,])
 effsampSize(testC$theta[1,])
 
 Rprof("out.out")
-test<-mcmc.gpd(X=data,u=1,mu=mu,var=var,n=10000,gamma=0.1,cpp=FALSE)
+test<-mcmc.gpd(X=data,u=1,mu=mu,var=var,n=10000,gam=0.1,cpp=FALSE)
 Rprof(NULL)
 summaryRprof("out.out")
 
 Rprof("out.out")
-testC<-mcmc.gpd(X=data,u=1,mu=mu,var=var,n=10000,gamma=0.1,cpp=TRUE)
+testC<-mcmc.gpd(X=data,u=1,mu=mu,var=var,n=10000,gam=0.1,cpp=TRUE)
 Rprof(NULL)
 summaryRprof("out.out")
 # Speed Test
@@ -39,10 +41,10 @@ lines(1:200,(1:200)^(-alpha),col='green')
 #Rcpp
 library(Rcpp)
 sourceCpp("cpp/MCMC_GPD_CPP.cpp")
-(mu<-c(1,1))
-(var<-matrix(c(1,0.2,0.2,1),2,2))
-test=mcmcGpdC(y=1:10,nstart=1,n=10,start=c(1,2),muR=mu,varR=var, tau=0,a=0, gamma=0.1,lamda=0)
-test2=mcmcGpd.internal(y=1:10,nstart=1,n=10,start=c(1,2),mu=mu,var=var, tau=0,a=0, gamma=0.1,lamda=0)
+(muC<-c(1,1))
+(varC<-matrix(c(1,0.2,0.2,1),2,2))
+test=mcmcGpdC(y=1:10,nstart=1,n=10,start=c(1,2),muR=mu,varR=var, tau=0,a=0, gam=0.1,lamda=0)
+test2=mcmcGpd.internal(y=1:10,nstart=1,n=10,start=c(1,2),mu=muC,var=varC, tau=0,a=0, gam=0.1,lamda=0)
 
 
 
