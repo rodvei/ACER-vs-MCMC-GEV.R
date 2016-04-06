@@ -1,12 +1,13 @@
-#library(Rcpp)
-#sourceCpp("Cpp/MCMC_GPD_CPP.cpp")
+library(Rcpp)
+sourceCpp("Cpp/MCMC_GPD_CPP.cpp")
 
 # data is matrix/vector of data (X), u aka thershold, start is starting values ([type,number])
-# type is xi and sigma (=exp(phi)), 
+# type is xi and sigma (=exp(phi)), start=c(xi,sigma) or matrix which xi and sigma are row
 # mu and var is mean and variance for the random walk starting distribution (g(x*|x)), 
 # gam (gamma) is the adaptive paramter (exp(-x/t)), 
 # a is the optimal accaptance rate.
 # tau=c(gam size, at what n) default tau=c(1/20,0.1*n)
+
 
 mcmc.gpd<- function(X, ...) UseMethod("mcmc.gpd",X)
 mcmc.gpd.numeric<-function(X,u,n=1000,start=NULL,mu=NULL,var=NULL,a=NULL,gam=NULL,cpp=TRUE,...){
@@ -21,11 +22,12 @@ mcmc.gpd.numeric<-function(X,u,n=1000,start=NULL,mu=NULL,var=NULL,a=NULL,gam=NUL
   # Fix starting values
   if(is.null(start)){
     start<-matrix(rep(NA,10),2)
-    start[,1]<-rep(.Machine$double.eps*100,2)
+    start[,1]<-rep(.Machine$double.eps*100,2)#c(0,1)
     start[,2]<-c(1.5,0.3)
     start[,3]<-c(0.5,3)
     start[,4]<-c(-0.1,0.3)
     start[,5]<-c(-0.5,3)
+    # c(xi,sigma), in "Choose starting value" sigma->log(sigma)
   }else if(all(start==0)){
     start<-c(.Machine$double.eps*100,log(.Machine$double.eps*100))
   }else{
@@ -38,6 +40,7 @@ mcmc.gpd.numeric<-function(X,u,n=1000,start=NULL,mu=NULL,var=NULL,a=NULL,gam=NUL
       stop('start must be vector or matrix')
     }
   }
+  # here start=c(xi, phi) where phi=log(sigma)
   
   
   # Starting mu and var for MCMC
@@ -88,9 +91,7 @@ mcmc.gpd.numeric<-function(X,u,n=1000,start=NULL,mu=NULL,var=NULL,a=NULL,gam=NUL
   }
   
   #####################################################################
-  print(dim(MCMC$theta))
-  print(n)
-  MCMC$theta<-rbind(MCMC$theta,rbeta(n,k+1,ny-k+1))
+  MCMC$theta<-rbind(MCMC$theta,rbeta(n,k+1,ny-k+1)) #xi, sigma, alpha
   MCMC$data<-X
   MCMC$u<-u
   class(MCMC)<-'mcmc'
