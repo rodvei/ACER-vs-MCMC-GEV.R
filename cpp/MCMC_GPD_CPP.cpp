@@ -40,7 +40,7 @@ double * mvrnormC(double mu0, double mu1, double sigma[4]) {
 
 //should work
 double lnRGdp(double *y, int yn,double ymax, double Xtemp1, double Xtemp2, double X1, double X2) {
-	if (Xtemp1 < (-exp(Xtemp2 / ymax))) {
+	if (Xtemp1 < (-exp(Xtemp2) / ymax)) {
 		return(-DBL_MAX);
 	}
 	double logLikeXtemp = 0;

@@ -78,7 +78,6 @@ mcmc.gpd.numeric<-function(X,u,n=1000,start=NULL,mu=NULL,var=NULL,a=NULL,gam=NUL
     tau<-0
   }
   if(is.null(a)){a=0}
-  if(is.null(gam)){gam=0}
   
   if(cpp==TRUE){
     MCMC<-mcmcGpdC(y=y,nstart=1,n=n,start=start,muR=mu,varR=var, tau=tau,a=a, gam=gam,lamda=lamda)
