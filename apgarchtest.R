@@ -129,8 +129,8 @@ aRate(mcmcMod$theta[2,350:10000])
 
 
 
-mcmcMod<-mcmc.gpd(as.vector(data),u=1.5,n=100000)
-mcmcMod$theta=mcmcMod$theta[1:3,500:100000]
+mcmcMod<-mcmc.gpd(as.vector(data),u=1.5,n=10000)
+mcmcMod$theta=mcmcMod$theta[1:3,500:10000]
 effsampSize(mcmcMod$theta[1,])
 effsampSize(mcmcMod$theta[2,])
 # plot est Pr(X>z)
@@ -231,39 +231,57 @@ n<-length(coil[,2])
 noMeanCoil<-coil[,2]-mean(coil[,2])
 #gamma<-(diff(coil[,2])>0)*1
 library(fGarch)
-test0<-garchFit(formula=~arma(1,0)+aparch(1,1),cond.dist="sstd",data=noMeanCoil,leverage=TRUE,include.mean=FALSE)
+testA0<-garchFit(formula=~aparch(1,1),cond.dist="sstd",data=coil[,2],leverage=TRUE)
+testA1<-garchFit(formula=~arma(1,0)+aparch(1,1),cond.dist="sstd",data=coil[,2],leverage=TRUE)#,include.mean=FALSE)
 test0@fit$ics
 test0@fit$llh
 
-testA2<-garchFit(formula=~arma(2,0)+aparch(1,1),cond.dist="sstd",data=noMeanCoil,leverage=TRUE,include.mean=FALSE)
+testA2<-garchFit(formula=~arma(2,0)+aparch(1,1),cond.dist="sstd",data=coil[,2],leverage=TRUE)#,include.mean=FALSE)
 testA2@fit$ics
 testA2@fit$llh
 
-testA3<-garchFit(formula=~arma(3,0)+aparch(1,1),cond.dist="sstd",data=noMeanCoil,leverage=TRUE,include.mean=FALSE)
+testA3<-garchFit(formula=~arma(3,0)+aparch(1,1),cond.dist="sstd",data=coil[,2],leverage=TRUE)#,include.mean=FALSE)
 testA3@fit$ics
 testA3@fit$llh
 
-testA4<-garchFit(formula=~arma(4,0)+aparch(1,1),cond.dist="sstd",data=noMeanCoil,leverage=TRUE,include.mean=FALSE)
+testA4<-garchFit(formula=~arma(4,0)+aparch(1,1),cond.dist="sstd",data=coil[,2],leverage=TRUE)#,include.mean=FALSE)
 testA4@fit$ics
 testA4@fit$llh
 
+testA5<-garchFit(formula=~arma(5,0)+aparch(1,1),cond.dist="sstd",data=coil[,2],leverage=TRUE)#,include.mean=FALSE)
+
+testA6<-garchFit(formula=~arma(6,0)+aparch(1,1),cond.dist="sstd",data=coil[,2],leverage=TRUE)#,include.mean=FALSE)
+
+testA7<-garchFit(formula=~arma(7,0)+aparch(1,1),cond.dist="sstd",data=coil[,2],leverage=TRUE)#,include.mean=FALSE)
+
+testA15<-garchFit(formula=~arma(15,0)+aparch(1,1),cond.dist="sstd",data=coil[,2],leverage=TRUE)#,include.mean=FALSE)
+
 2*(-testA4@fit$llh+testA3@fit$llh)
+
+2*(-testA5@fit$llh+testA4@fit$llh)
+
+2*(-testA6@fit$llh+testA5@fit$llh)
+
+2*(-testA7@fit$llh+testA6@fit$llh)
+
 
 # AIC=>A3
 # BIC=>A2
 # SIC=>A4
 # HQIC=>A$
-
-
+testA3<-garchFit(formula=~arma(3,0)+aparch(1,1),cond.dist="sstd",data=coil[,2],leverage=TRUE)#,include.mean=FALSE)
+model3=list(ar=c(-2.546e-02,-4.335e-02,-1.723e-02),beta=0.95,mu=4.126e-04,omega=9.769e-05,alpha=5.545e-02,gamma=2.333e-01,delta=1.127e+00,skew=9.617e-01,shape=7.342e+00)
+garchSpecModel3<-garchSpec(model=model3,cond.dist = "sstd",presample = cbind(z=testA3@fit$series$z[1:10],h=testA3@fit$series$h[1:10],y=testA3@fit$series$x[1:10]))
+plot(garchSim(garchSpecModel3,n=length(coil[,2]))$garch,type='l',xlab='t',ylab=expression(z[t]),mgp=c(2,1,0),cex.lab=1.4)
 
 garchSim(garchSpec(model=test@fit$params$params,cond.dist="sstd"),n=100)
 
-plot(garchSim(garchSpec(model=test@fit$params$params,cond.dist="sstd"),n=10000)+mean(mean(coil[2:n,2])),type='l')
+plot(garchSim(garchSpec(model=testA3@fit$params$params,cond.dist="sstd"),n=5000),type='l',ylab=)
 
 # residuals:
 # (standardize=FALSE) difference between Yt and its conditional expectation (est \hat{a}_t)
 # (standardize=TRUE) \hat{eps}_t=\hat{a}_t / \hat{\sigma}_t
-plot(residuals(test, standardize = FALSE),type='l')
+plot(residuals(test0, standardize = TRUE),type='l')
 
 
 
